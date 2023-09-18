@@ -1,0 +1,47 @@
+let start=document.querySelector(".btn1");
+start.addEventListener("click",startDetection);
+function startDetection() {
+    console.log("start");
+    // Make an AJAX POST request to /startDetection endpoint
+    fetch('/startDetection', {
+        method: 'POST'
+        
+    })
+    
+    .then(response => {
+        if (response.status === 200) {
+            console.log('Pitch detection started.');
+            // You can add additional code here to update the UI or take other actions
+            handlePitch();
+        } else {
+            console.error('Failed to start pitch detection.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function stopDetection() {
+    // Make an AJAX POST request to /stopDetection endpoint
+    fetch('/stopDetection', {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.status === 200) {
+            console.log('Pitch detection stopped.');
+            // You can add additional code here to update the UI or take other actions
+        } else {
+            console.error('Failed to stop pitch detection.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+// Inside the handlePitch function in your JavaScript
+function handlePitch(pitchInHz, note) {
+    // Update the pitch and note values in the HTML
+    document.getElementById('pitchValue').textContent = pitchInHz.toFixed(2) + ' Hz';
+    document.getElementById('noteValue').textContent = note;
+}

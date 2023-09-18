@@ -1,0 +1,58 @@
+// Create a WebSocket connection
+const socket = new WebSocket('ws://localhost:8080/socket'); // Replace with your WebSocket URL
+
+// Event handler for when the WebSocket connection is opened
+socket.addEventListener('open', (event) => {
+    console.log('WebSocket connection opened.');
+});
+
+// Event handler for when a message is received from the server
+socket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    const pitch = data.pitch;
+    const note = data.note;
+
+    // Update the UI with the received pitch and note information
+    document.getElementById('noteValue').textContent = note;
+});
+
+// Event handler for when the WebSocket connection is closed
+socket.addEventListener('close', (event) => {
+    console.log('WebSocket connection closed.');
+});
+
+// Function to start pitch detection
+    function startPitchDetection() {
+        // Send a request to start pitch detection on the server
+        fetch('/startDetection', {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.status === 200) {
+                console.log('Pitch detection started.');
+            } else {
+                console.error('Failed to start pitch detection.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+// Function to stop pitch detection
+function stopPitchDetection() {
+    // Send a request to stop pitch detection on the server
+    fetch('/stopDetection', {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.status === 200) {
+            console.log('Pitch detection stopped.');
+        } else {
+            console.error('Failed to stop pitch detection.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}

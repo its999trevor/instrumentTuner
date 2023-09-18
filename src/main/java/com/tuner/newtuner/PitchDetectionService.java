@@ -15,22 +15,23 @@ import be.tarsos.dsp.pitch.PitchProcessor.PitchEstimationAlgorithm;
 
 @Service
 public class PitchDetectionService {
-
-    private boolean pitchDetectionRunning = false;
-   @Autowired
+    private Thread pitchDetectionThread; 
+    private TargetDataLine line; // Store the audio input line.
+    private volatile boolean pitchDetectionRunning = false;
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     public void startPitchDetection() {
-        
-        if (!pitchDetectionRunning) {
+        if (!isPitchDetectionRunning()) {
+            pitchDetectionRunning = true;
             try {
                 int sampleRate = 44100;
                 int bufferSize = 1024;
 
                 // Set up audio input from the microphone.
-                AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, true);
+                AudioFormat format = new AudioFormat(44100, 16, 1, true, false);
                 DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-                TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
+                line = (TargetDataLine) AudioSystem.getLine(info);
                 line.open(format);
                 line.start();
 
@@ -44,19 +45,35 @@ public class PitchDetectionService {
                 dispatcher.addAudioProcessor(new PitchProcessor(PitchEstimationAlgorithm.YIN, sampleRate, bufferSize, createPitchHandler()));
 
                 // Start processing audio from the microphone.
-                new Thread(dispatcher).start();
+                pitchDetectionThread = new Thread(dispatcher);
+                pitchDetectionThread.start();
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        
+       
+        return;
     }
 
     public void stopPitchDetection() {
-        // Add logic to stop the pitch detection process here
-        pitchDetectionRunning = true;
-        
+        if (isPitchDetectionRunning()) {
+            pitchDetectionRunning = false;
+    
+            if (pitchDetectionThread != null) {
+                pitchDetectionThread.interrupt();
+            }
+            if (line != null) {
+                line.stop();
+                line.close();
+            }
+    
+            // Additional cleanup (close audio input, release resources, etc.) here.
+    
+            System.out.println("stop");
+    
+            messagingTemplate.convertAndSend("/topic/pitch", "Stop!");
+        }
     }
 
     public boolean isPitchDetectionRunning() {
@@ -78,11 +95,14 @@ public class PitchDetectionService {
         return new PitchDetectionHandler() {
             @Override
             public void handlePitch(PitchDetectionResult result, AudioEvent audioEvent) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
                 float pitchInHz = result.getPitch();
                 if (pitchInHz >= 110 && pitchInHz < 196) {
                 String note = getNoteFromPitch(pitchInHz);
                 System.out.println("Pitch: " + pitchInHz + " Hz - Note: " + note);
-                sendPitchToClient(note);
+                sendPitchToClient(note);    
                 }
 
             }
